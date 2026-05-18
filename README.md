@@ -24,6 +24,44 @@ No cloud. No API keys. No tracking. Just your news, summarized your way.
 
 ---
 
+## What Is RSS?
+
+**RSS (Really Simple Syndication)** is a standard web format that websites use to publish their latest content in a machine-readable way.
+
+Instead of visiting 10 different news sites every morning to check for new articles, each website exposes an RSS **feed** — a structured XML file that lists their latest articles with titles, summaries, links, and timestamps. Your app just fetches those XML files and gets all the new content in one place.
+
+### What a raw RSS feed looks like
+
+```xml
+<rss version="2.0">
+  <channel>
+    <title>TechCrunch</title>
+    <item>
+      <title>OpenAI Releases New Model</title>
+      <link>https://techcrunch.com/2026/05/18/openai-...</link>
+      <description>OpenAI has announced...</description>
+      <pubDate>Sun, 18 May 2026 07:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
+```
+
+Every major news site — BBC, TechCrunch, NASA, Hacker News — publishes one of these files and keeps it updated automatically whenever they post something new.
+
+### How NeuralPress uses RSS
+
+```
+feeds.yaml      →  lists the RSS feed URLs you care about
+feedparser      →  fetches and parses the XML for you
+fetch_rss.py    →  extracts title + description from each item
+summarize.py    →  sends the description to llama3.2:3b
+save_digest.py  →  writes the final daily_brief.md
+```
+
+RSS is the **input source** of the entire pipeline — it's how the agent discovers articles and gets their content, without scraping, logging in, or paying for any API.
+
+---
+
 ## System Requirements
 
 | Component | Minimum | Recommended |
