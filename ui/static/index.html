@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuralPress — Daily Digest</title>
+  <style>
+    /* ── Reset ─────────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Design tokens ─────────────────────────────────────────────────────── */
+    :root {
+      --sidebar-w:   240px;
+      --topbar-h:    56px;
+
+      --bg:          #0f1117;
+      --bg-sidebar:  #161b27;
+      --bg-card:     #1a2035;
+      --bg-hover:    #1e2740;
+      --bg-active:   #1e3a5f;
+      --border:      #2a3350;
+      --text:        #e2e8f0;
+      --text-muted:  #64748b;
+      --text-bright: #f8fafc;
+      --accent:      #3b82f6;
+      --accent-dim:  #1d4ed8;
+      --tag-bg:      #1e3a5f;
+      --tag-text:    #93c5fd;
+      --shadow:      0 4px 24px rgba(0,0,0,.45);
+      --radius:      10px;
+      --radius-sm:   6px;
+    }
+
+    [data-theme="light"] {
+      --bg:          #f0f4f8;
+      --bg-sidebar:  #ffffff;
+      --bg-card:     #ffffff;
+      --bg-hover:    #f1f5f9;
+      --bg-active:   #dbeafe;
+      --border:      #e2e8f0;
+      --text:        #1e293b;
+      --text-muted:  #94a3b8;
+      --text-bright: #0f172a;
+      --accent:      #2563eb;
+      --accent-dim:  #1d4ed8;
+      --tag-bg:      #dbeafe;
+      --tag-text:    #1d4ed8;
+      --shadow:      0 4px 24px rgba(0,0,0,.1);
+    }
+
+    /* ── Base ──────────────────────────────────────────────────────────────── */
+    html { font-size: 16px; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      height: 100dvh;          /* dvh for mobile browser chrome */
+      overflow: hidden;
+      transition: background .2s, color .2s;
+    }
+
+    /* ── Mobile overlay backdrop ───────────────────────────────────────────── */
+    .sidebar-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.55);
+      z-index: 99;
+    }
+    .sidebar-backdrop.visible { display: block; }
+
+    /* ── Sidebar ───────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 100;
+      transition: transform .25s ease;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .brand { display: flex; align-items: center; gap: 8px; }
+    .brand-icon { font-size: 1.4rem; line-height: 1; }
+    .brand-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      letter-spacing: -.3px;
+    }
+
+    .theme-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 5px 9px;
+      cursor: pointer;
+      font-size: .9rem;
+      color: var(--text);
+      min-width: 36px;
+      min-height: 36px;
+      transition: background .15s;
+    }
+    .theme-toggle:hover { background: var(--bg-hover); }
+
+    .sidebar-section { padding: 12px 12px; }
+
+    .run-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 11px 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 44px;       /* accessible touch target */
+      transition: background .15s, transform .1s;
+    }
+    .run-btn:hover  { background: var(--accent-dim); }
+    .run-btn:active { transform: scale(.97); }
+    .run-btn.running { background: #475569; cursor: not-allowed; }
+    .run-icon { font-size: .75rem; }
+
+    .sidebar-label {
+      font-size: .63rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      padding: 0 4px;
+    }
+
+    .date-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      overflow-y: auto;
+      flex: 1;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .date-item {
+      padding: 9px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: .875rem;
+      color: var(--text);
+      transition: background .12s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 40px;
+      word-break: break-word;
+    }
+    .date-item::before { content: "📄"; font-size: .75rem; flex-shrink: 0; }
+    .date-item:hover  { background: var(--bg-hover); }
+    .date-item.active { background: var(--bg-active); color: var(--accent); font-weight: 600; }
+    .date-item.loading { color: var(--text-muted); cursor: default; font-style: italic; }
+
+    /* date-list section needs to grow to fill space */
+    .sidebar-dates {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      padding: 0 12px 12px;
+    }
+
+    .sidebar-footer {
+      padding: 10px 16px;
+      border-top: 1px solid var(--border);
+      font-size: .7rem;
+      color: var(--text-muted);
+      text-align: center;
+      flex-shrink: 0;
+    }
+
+    /* ── Main area ─────────────────────────────────────────────────────────── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;           /* prevent flex blowout */
+    }
+
+    /* ── Topbar ────────────────────────────────────────────────────────────── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 16px;
+      height: var(--topbar-h);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-sidebar);
+      flex-shrink: 0;
+      min-width: 0;
+    }
+
+    .menu-toggle {
+      display: none;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-size: 1.2rem;
+      cursor: pointer;
+      padding: 6px;
+      min-width: 36px;
+      min-height: 36px;
+      flex-shrink: 0;
+    }
+
+    .topbar-title {
+      font-size: .92rem;
+      font-weight: 600;
+      color: var(--text-bright);
+      flex-shrink: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    /* Category filters — horizontal scroll strip in topbar */
+    .category-filters {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      flex: 1;
+      padding: 4px 0;
+      scrollbar-width: none;  /* hide scrollbar on the pill strip */
+      -ms-overflow-style: none;
+      -webkit-overflow-scrolling: touch;
+    }
+    .category-filters::-webkit-scrollbar { display: none; }
+
+    .cat-pill {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 600;
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all .15s;
+      user-select: none;
+      white-space: nowrap;
+      flex-shrink: 0;
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+    }
+    .cat-pill:hover  { border-color: var(--accent); }
+    .cat-pill.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    /* ── Content ───────────────────────────────────────────────────────────── */
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 32px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    /* Constrain readable width on very wide screens */
+    .content-inner {
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    /* ── Empty state ───────────────────────────────────────────────────────── */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+      gap: 12px;
+      color: var(--text-muted);
+    }
+    .empty-icon  { font-size: 3rem; }
+    .empty-state h2 { font-size: 1.25rem; color: var(--text); }
+    .empty-state p  {
+      max-width: 360px;
+      line-height: 1.65;
+      font-size: .875rem;
+    }
+
+    /* ── Digest header ─────────────────────────────────────────────────────── */
+    .digest-header  { margin-bottom: 24px; }
+    .digest-header h1 {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--text-bright);
+      line-height: 1.25;
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+    .digest-meta { font-size: .8rem; color: var(--text-muted); }
+
+    .digest-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    /* ── Category section ──────────────────────────────────────────────────── */
+    .category-section { margin-bottom: 32px; }
+    .category-section.hidden { display: none; }
+
+    .category-heading {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .category-heading::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Article card ──────────────────────────────────────────────────────── */
+    .article-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 10px;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .article-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow);
+    }
+
+    .article-title {
+      font-size: .95rem;
+      font-weight: 700;
+      color: var(--text-bright);
+      margin-bottom: 4px;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .article-meta {
+      font-size: .73rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .article-summary {
+      font-size: .865rem;
+      line-height: 1.65;
+      color: var(--text);
+      margin-bottom: 10px;
+      word-break: break-word;
+    }
+
+    .article-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: .77rem;
+      font-weight: 600;
+      color: var(--accent);
+      text-decoration: none;
+      transition: opacity .15s;
+    }
+    .article-link:hover { opacity: .75; }
+
+    /* ── Digest footer ─────────────────────────────────────────────────────── */
+    .digest-footer {
+      margin-top: 28px;
+      padding: 14px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: .77rem;
+      color: var(--text-muted);
+      line-height: 1.7;
+      word-break: break-word;
+    }
+    .digest-footer strong { color: var(--text); }
+
+    /* ── Modal overlay ─────────────────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      padding: 16px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+    .modal-overlay.visible { opacity: 1; pointer-events: all; }
+
+    .modal {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 28px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .modal-icon  { font-size: 2.25rem; margin-bottom: 10px; }
+    .modal-title { font-size: 1.05rem; font-weight: 700; color: var(--text-bright); margin-bottom: 6px; }
+    .modal-msg   { font-size: .875rem; color: var(--text-muted); line-height: 1.6; }
+
+    .modal-log {
+      margin-top: 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-size: .7rem;
+      color: var(--text-muted);
+      text-align: left;
+      max-height: 160px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+      display: none;
+    }
+    .modal-log.visible { display: block; }
+
+    .modal-close {
+      margin-top: 18px;
+      padding: 10px 28px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-size: .875rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 44px;
+      transition: background .15s;
+    }
+    .modal-close:hover { background: var(--accent-dim); }
+
+    /* ── Spinner ───────────────────────────────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    /* ── Scrollbar ─────────────────────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* ── Responsive: tablet (≤768px) ──────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0; left: 0; bottom: 0;
+        transform: translateX(-100%);
+        box-shadow: var(--shadow);
+      }
+      .sidebar.open { transform: translateX(0); }
+      .menu-toggle  { display: flex; align-items: center; justify-content: center; }
+      .topbar-title { max-width: 160px; }
+    }
+
+    /* ── Responsive: mobile (≤480px) ──────────────────────────────────────── */
+    @media (max-width: 480px) {
+      :root { --sidebar-w: 100vw; }
+
+      .content { padding: 16px 14px; }
+
+      .digest-header h1 { font-size: 1.25rem; }
+
+      /* Move category filters below topbar as a full-width scroll strip */
+      .topbar {
+        flex-wrap: wrap;
+        height: auto;
+        padding: 10px 14px;
+        gap: 8px;
+      }
+      .topbar-row1 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        width: 100%;
+      }
+      .topbar-title { max-width: calc(100vw - 120px); }
+      .category-filters {
+        width: 100%;
+        padding: 2px 0 4px;
+        border-top: 1px solid var(--border);
+        margin: 0;
+      }
+
+      .article-card { padding: 14px 14px; }
+      .article-title { font-size: .9rem; }
+
+      .modal { padding: 24px 18px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Mobile sidebar backdrop -->
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <!-- ── Sidebar ───────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <span class="brand-icon">📰</span>
+        <span class="brand-name">NeuralPress</span>
+      </div>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+    </div>
+
+    <div class="sidebar-section">
+      <button class="run-btn" id="runBtn">
+        <span class="run-icon">▶</span>
+        <span class="run-label">Generate Today</span>
+      </button>
+    </div>
+
+    <div class="sidebar-dates">
+      <p class="sidebar-label">Past Digests</p>
+      <ul class="date-list" id="dateList">
+        <li class="date-item loading">Loading...</li>
+      </ul>
+    </div>
+
+    <div class="sidebar-footer">Powered by llama3.2:3b · Ollama</div>
+  </aside>
+
+  <!-- ── Main ──────────────────────────────────────────────────────── -->
+  <main class="main" id="main">
+
+    <!-- Topbar — wraps on ≤480px so filters drop to a second row -->
+    <header class="topbar" id="topbar">
+      <!-- On mobile this row holds the toggle + title + theme btn -->
+      <div class="topbar-row1" id="topbarRow1">
+        <button class="menu-toggle" id="menuToggle" aria-label="Open menu">☰</button>
+        <div class="topbar-title" id="topbarTitle">NeuralPress</div>
+      </div>
+      <!-- Category filter pills (horizontal scroll) -->
+      <div class="category-filters" id="categoryFilters"></div>
+    </header>
+
+    <!-- Scrollable content -->
+    <div class="content" id="content">
+      <div class="content-inner">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">🗞️</div>
+          <h2>No digest selected</h2>
+          <p>Pick a date from the sidebar, or click <strong>Generate Today</strong> to create your first brief.</p>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── Agent run modal ───────────────────────────────────────────── -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal">
+      <div class="modal-icon"  id="modalIcon">⚙️</div>
+      <h3 class="modal-title"  id="modalTitle">Running agent...</h3>
+      <p class="modal-msg"     id="modalMsg">Fetching feeds and summarizing articles. This may take a few minutes.</p>
+      <pre class="modal-log"   id="modalLog"></pre>
+      <button class="modal-close" id="modalClose" style="display:none">Close</button>
+    </div>
+  </div>
+
+  <script>
+    /* ── NeuralPress — app.js ──────────────────────────────────────────────── */
+
+    const $ = id => document.getElementById(id);
+    const html = document.documentElement;
+
+    let currentDate  = null;
+    let allSections  = [];    // [{ category, el }]
+    let activeFilter = null;
+
+    // ── Theme ──────────────────────────────────────────────────────────────
+
+    function initTheme() { setTheme(localStorage.getItem("np-theme") || "dark"); }
+
+    function setTheme(t) {
+      html.setAttribute("data-theme", t);
+      $("themeToggle").textContent = t === "dark" ? "🌙" : "☀️";
+      localStorage.setItem("np-theme", t);
+    }
+
+    $("themeToggle").addEventListener("click", () =>
+      setTheme(html.getAttribute("data-theme") === "dark" ? "light" : "dark")
+    );
+
+    // ── Sidebar / mobile ───────────────────────────────────────────────────
+
+    function openSidebar() {
+      $("sidebar").classList.add("open");
+      $("sidebarBackdrop").classList.add("visible");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeSidebar() {
+      $("sidebar").classList.remove("open");
+      $("sidebarBackdrop").classList.remove("visible");
+      document.body.style.overflow = "";
+    }
+
+    $("menuToggle").addEventListener("click", e => { e.stopPropagation(); openSidebar(); });
+    $("sidebarBackdrop").addEventListener("click", closeSidebar);
+
+    // ── Digest list ────────────────────────────────────────────────────────
+
+    async function loadDigestList() {
+      const list = $("dateList");
+      try {
+        const res   = await fetch("/api/digests");
+        const dates = await res.json();
+        list.innerHTML = "";
+
+        if (dates.length === 0) {
+          list.innerHTML = '<li class="date-item loading">No digests yet</li>';
+          return;
+        }
+
+        dates.forEach((date, i) => {
+          const li = document.createElement("li");
+          li.className   = "date-item";
+          li.textContent = fmtDate(date);
+          li.dataset.date = date;
+          li.addEventListener("click", () => { closeSidebar(); selectDate(date, li); });
+          list.appendChild(li);
+          if (i === 0) selectDate(date, li);   // auto-load newest
+        });
+      } catch (err) {
+        list.innerHTML = '<li class="date-item loading">Failed to load</li>';
+        console.error(err);
+      }
+    }
+
+    function fmtDate(iso) {
+      try {
+        return new Date(iso + "T00:00:00").toLocaleDateString("en-US",
+          { weekday: "short", month: "short", day: "numeric" });
+      } catch { return iso; }
+    }
+
+    // ── Select digest ──────────────────────────────────────────────────────
+
+    async function selectDate(date, li) {
+      if (currentDate === date) return;
+      currentDate = date;
+
+      document.querySelectorAll(".date-item").forEach(el => el.classList.remove("active"));
+      if (li) li.classList.add("active");
+
+      $("topbarTitle").textContent = `Daily Brief — ${fmtDate(date)}`;
+      activeFilter = null;
+      showLoading();
+
+      try {
+        const res = await fetch(`/api/digest/${date}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderDigest(data.content);
+      } catch (err) {
+        showError("Failed to load digest: " + err.message);
+      }
+    }
+
+    // ── Render digest ──────────────────────────────────────────────────────
+
+    function renderDigest(markdown) {
+      allSections  = [];
+      activeFilter = null;
+
+      const parsed  = parseDigest(markdown.split("\n"));
+      const inner   = document.createElement("div");
+      inner.className = "content-inner";
+
+      // Header
+      const hdr = document.createElement("div");
+      hdr.className = "digest-header";
+      hdr.innerHTML = `<h1>${esc(parsed.title)}</h1><p class="digest-meta">${esc(parsed.meta)}</p>`;
+      inner.appendChild(hdr);
+
+      const hr = document.createElement("hr");
+      hr.className = "digest-divider";
+      inner.appendChild(hr);
+
+      // Category pills
+      buildCategoryFilters(parsed.categories.map(c => c.name));
+
+      // Article sections
+      parsed.categories.forEach(cat => {
+        const sec  = document.createElement("div");
+        sec.className = "category-section";
+        sec.dataset.category = cat.name;
+
+        const h2  = document.createElement("h2");
+        h2.className = "category-heading";
+        h2.textContent = `${cat.icon} ${cat.name}`;
+        sec.appendChild(h2);
+
+        cat.articles.forEach(art => sec.appendChild(buildCard(art)));
+        inner.appendChild(sec);
+        allSections.push({ category: cat.name, el: sec });
+      });
+
+      // Footer
+      if (parsed.footer) {
+        const foot = document.createElement("div");
+        foot.className = "digest-footer";
+        foot.innerHTML = parsed.footer
+          .replace(/`([^`]+)`/g, "<strong>$1</strong>")
+          .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+        inner.appendChild(foot);
+      }
+
+      const content = $("content");
+      content.innerHTML = "";
+      content.appendChild(inner);
+      content.scrollTop = 0;
+    }
+
+    // ── Markdown parser ────────────────────────────────────────────────────
+
+    function parseDigest(lines) {
+      const out = { title: "", meta: "", categories: [], footer: "" };
+      let i = 0;
+
+      // # Title
+      while (i < lines.length && !lines[i].startsWith("# ")) i++;
+      if (i < lines.length) {
+        out.title = lines[i].replace(/^#\s*/, "").replace(/📰\s*/, "").trim();
+        i++;
+      }
+      // *meta line*
+      while (i < lines.length && lines[i].trim() === "") i++;
+      if (i < lines.length && lines[i].startsWith("*")) {
+        out.meta = lines[i].replace(/\*/g, "").trim();
+        i++;
+      }
+
+      let cat = null, art = null;
+      const flush = () => { if (art && cat) { cat.articles.push(art); art = null; } };
+
+      for (; i < lines.length; i++) {
+        const ln = lines[i];
+
+        if (ln.startsWith("## ")) {
+          flush();
+          const raw  = ln.replace(/^##\s*/, "").trim();
+          const emo  = raw.match(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*/u);
+          const icon = emo ? emo[0].trim() : "📌";
+          const name = raw.replace(/^(\p{Emoji_Presentation}|\p{Extended_Pictographic})\s*/u, "").trim();
+          cat = { name, icon, articles: [] };
+          out.categories.push(cat);
+          continue;
+        }
+
+        if (ln.startsWith("### ") && cat) {
+          flush();
+          art = { title: ln.replace(/^###\s*/, "").trim(), meta: "", summary: "", link: "" };
+          continue;
+        }
+
+        if (art) {
+          if (ln.startsWith("*") && ln.endsWith("*") && !art.meta) {
+            art.meta = ln.replace(/\*/g, "").trim();
+          } else if (ln.startsWith("📎")) {
+            const m = ln.match(/\(([^)]+)\)/);
+            if (m) art.link = m[1];
+          } else if (ln.trim() && !ln.startsWith("---") && !ln.startsWith("*")) {
+            art.summary += (art.summary ? " " : "") + ln.trim();
+          }
+        }
+      }
+      flush();
+
+      // Footer — grab from last 4 lines
+      const ftLines = lines.slice(-4)
+        .filter(l => l.includes("Generated") || l.includes("Model:") || l.includes("Time:"));
+      if (ftLines.length) out.footer = ftLines.join(" ").replace(/\*+/g, "").trim();
+
+      return out;
+    }
+
+    function buildCard(art) {
+      const card = document.createElement("div");
+      card.className = "article-card";
+      card.innerHTML = `
+        <div class="article-title">${esc(art.title)}</div>
+        <div class="article-meta">${esc(art.meta)}</div>
+        <div class="article-summary">${esc(art.summary)}</div>
+        ${art.link
+          ? `<a class="article-link" href="${esc(art.link)}" target="_blank" rel="noopener noreferrer">📎 Read full article ↗</a>`
+          : ""}`;
+      return card;
+    }
+
+    // ── Category filter pills ──────────────────────────────────────────────
+
+    function buildCategoryFilters(cats) {
+      const wrap = $("categoryFilters");
+      wrap.innerHTML = "";
+      if (cats.length <= 1) return;
+
+      const allPill = mkPill("All", true);
+      allPill.addEventListener("click", () => applyFilter(null, allPill));
+      wrap.appendChild(allPill);
+
+      cats.forEach(c => {
+        const p = mkPill(c, false);
+        p.addEventListener("click", () => applyFilter(c, p));
+        wrap.appendChild(p);
+      });
+    }
+
+    function mkPill(label, active) {
+      const el = document.createElement("span");
+      el.className   = "cat-pill" + (active ? " active" : "");
+      el.textContent = label;
+      return el;
+    }
+
+    function applyFilter(cat, pill) {
+      activeFilter = cat;
+      document.querySelectorAll(".cat-pill").forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      allSections.forEach(({ category, el }) =>
+        el.classList.toggle("hidden", cat !== null && cat !== category)
+      );
+    }
+
+    // ── Run agent ──────────────────────────────────────────────────────────
+
+    $("runBtn").addEventListener("click", async () => {
+      const btn = $("runBtn");
+      if (btn.classList.contains("running")) return;
+
+      showModal({ icon: "⚙️", title: "Generating digest…", msg: "Fetching feeds and summarizing with llama3.2:3b. This may take a few minutes." });
+      btn.classList.add("running");
+      btn.innerHTML = '<span class="spinner"></span><span class="run-label">Running…</span>';
+
+      try {
+        const res  = await fetch("/api/run", { method: "POST" });
+        const data = await res.json();
+        if (data.success) {
+          updModal({ icon: "✅", title: "Digest ready!", msg: "Successfully generated today's digest.", log: data.output, close: true });
+          await loadDigestList();
+        } else {
+          updModal({ icon: "❌", title: "Agent failed", msg: "Make sure Ollama is running with llama3.2:3b.", log: data.error || data.output, close: true });
+        }
+      } catch (err) {
+        updModal({ icon: "❌", title: "Network error", msg: err.message, close: true });
+      } finally {
+        btn.classList.remove("running");
+        btn.innerHTML = '<span class="run-icon">▶</span><span class="run-label">Generate Today</span>';
+      }
+    });
+
+    // ── Modal ──────────────────────────────────────────────────────────────
+
+    function showModal({ icon, title, msg }) {
+      $("modalIcon").textContent  = icon;
+      $("modalTitle").textContent = title;
+      $("modalMsg").textContent   = msg;
+      $("modalLog").textContent   = "";
+      $("modalLog").classList.remove("visible");
+      $("modalClose").style.display = "none";
+      $("modalOverlay").classList.add("visible");
+    }
+
+    function updModal({ icon, title, msg, log, close }) {
+      $("modalIcon").textContent  = icon;
+      $("modalTitle").textContent = title;
+      $("modalMsg").textContent   = msg;
+      if (log)   { $("modalLog").textContent = log.trim(); $("modalLog").classList.add("visible"); }
+      if (close) { $("modalClose").style.display = "inline-block"; }
+    }
+
+    $("modalClose").addEventListener("click", () => $("modalOverlay").classList.remove("visible"));
+    $("modalOverlay").addEventListener("click", e => {
+      if (e.target === $("modalOverlay")) $("modalOverlay").classList.remove("visible");
+    });
+
+    // ── State helpers ──────────────────────────────────────────────────────
+
+    function showLoading() {
+      $("content").innerHTML = `
+        <div class="content-inner">
+          <div class="empty-state">
+            <div class="spinner" style="width:30px;height:30px;border-width:3px"></div>
+          </div>
+        </div>`;
+    }
+
+    function showError(msg) {
+      $("content").innerHTML = `
+        <div class="content-inner">
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <h2>Something went wrong</h2>
+            <p>${esc(msg)}</p>
+          </div>
+        </div>`;
+    }
+
+    // ── Utility ────────────────────────────────────────────────────────────
+
+    function esc(s) {
+      if (!s) return "";
+      return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    // ── Init ───────────────────────────────────────────────────────────────
+    initTheme();
+    loadDigestList();
+  </script>
+</body>
+</html>
