@@ -1,0 +1,43 @@
+settings:
+  max_articles_per_run: 20
+  summary_max_words: 80
+  output_dir: ./output
+  cache_file: ./data/seen_articles.json
+  cache_retention_days: 30
+
+feeds:
+  - name: "Hacker News"
+    url: "https://news.ycombinator.com/rss"
+    category: "Technology"
+    max_articles: 5
+    enabled: true
+
+  - name: "TechCrunch"
+    url: "https://techcrunch.com/feed/"
+    category: "Technology"
+    max_articles: 4
+    enabled: true
+
+  - name: "BBC World News"
+    url: "http://feeds.bbci.co.uk/news/world/rss.xml"
+    category: "World News"
+    max_articles: 4
+    enabled: true
+
+  - name: "The Batch - DeepLearning.AI"
+    url: "https://www.deeplearning.ai/the-batch/feed/"
+    category: "AI / ML"
+    max_articles: 3
+    enabled: true
+
+  - name: "NASA News"
+    url: "https://www.nasa.gov/news-release/feed/"
+    category: "Science"
+    max_articles: 2
+    enabled: true
+
+  - name: "NDTV Top Stories"
+    url: "https://feeds.feedburner.com/ndtvnews-top-stories"
+    category: "India"
+    max_articles: 4
+    enabled: true
