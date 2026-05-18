@@ -2,8 +2,22 @@
 
 **Project:** Local News / RSS Digest Agent
 **Platform:** Ubuntu (local machine)
-**Stack:** Ollama (llama3.2:3b) + MCP Tools + LangChain Agent + Streamlit
+**Stack:** Ollama (llama3.2:3b) + MCP Tools + LangChain + Flask + HTML/CSS/JS
 **Version:** 1.0
+
+---
+
+## 📡 What Is RSS?
+
+**RSS (Really Simple Syndication)** is a standard XML format that news websites use to publish new articles automatically. Instead of scraping pages, the agent simply fetches each feed URL — a structured file that lists article titles, descriptions, links and timestamps — and processes the content directly.
+
+```
+BBC World News  →  http://feeds.bbci.co.uk/news/world/rss.xml
+TechCrunch      →  https://techcrunch.com/feed/
+Hacker News     →  https://news.ycombinator.com/rss
+```
+
+RSS is the **zero-cost, zero-login input source** for the entire pipeline.
 
 ---
 
@@ -48,9 +62,11 @@ Build a **locally running, automated news digest agent** that:
 - [x] Footer with stats (articles processed, model used, time taken)
 
 ### Optional UI
-- [x] Streamlit app to browse and read past daily briefs
-- [x] Date picker to select past digests
-- [x] Category filter
+- [x] Flask + HTML/CSS/JS web app to browse and read past daily briefs
+- [x] Date list sidebar to select past digests
+- [x] Category filter pills with horizontal scroll
+- [x] Dark / light theme toggle
+- [x] Responsive layout (desktop, tablet, mobile)
 
 ### Reliability
 - [x] Skip articles that fail to fetch (timeout, 404)
@@ -83,9 +99,10 @@ Build a **locally running, automated news digest agent** that:
 |------------|-------------|
 | `agent.py` | Main runnable agent script |
 | `mcp/` | Three MCP tool modules |
-| `core/` | LLM wrapper, agent chain, formatter |
+| `core/` | LLM wrapper + markdown formatter |
 | `feeds.yaml` | User-configurable feed list |
-| `ui/app.py` | Optional Streamlit digest viewer |
+| `ui/server.py` | Flask API server |
+| `ui/static/index.html` | Responsive web UI (HTML + CSS + JS) |
 | `output/` | Daily brief markdown files |
 | `README.md` | Setup and usage guide |
 | `.env.example` | Config template |
@@ -97,26 +114,26 @@ Build a **locally running, automated news digest agent** that:
 ## 🏁 Milestones
 
 ### Phase 1 — Feed Fetching (Days 1–2)
-- [ ] `feeds.yaml` schema defined
-- [ ] `fetch_rss` MCP tool working
-- [ ] Deduplification cache working
-- [ ] CLI test: print fetched article titles
+- [x] `feeds.yaml` schema defined
+- [x] `fetch_rss` MCP tool working
+- [x] Deduplication cache working
+- [x] CLI test: print fetched article titles
 
 ### Phase 2 — Summarization (Days 3–4)
-- [ ] `summarize_article` MCP tool working with Ollama
-- [ ] Prompt tuned for concise, clean summaries
-- [ ] Batch summarization with progress logging
+- [x] `summarize_article` MCP tool working with Ollama
+- [x] Prompt tuned for concise, clean summaries
+- [x] Batch summarization with progress logging
 
 ### Phase 3 — Agent + Output (Days 5–6)
-- [ ] LangChain agent orchestrating all 3 MCP tools
-- [ ] `save_digest` tool writing formatted markdown
-- [ ] `agent.py` end-to-end working
+- [x] Fixed pipeline orchestrating all 3 MCP tools
+- [x] `save_digest` tool writing formatted markdown
+- [x] `agent.py` end-to-end working
 
 ### Phase 4 — Polish (Days 7–8)
-- [ ] Streamlit UI for reading past digests
-- [ ] Cron setup tested
-- [ ] Unit tests passing
-- [ ] README finalized
+- [x] Flask + HTML/CSS/JS responsive web UI
+- [x] Cron setup documented
+- [x] 28 unit tests passing
+- [x] README finalized with MCP and RSS documentation
 
 ---
 
