@@ -1,0 +1,22 @@
+[
+  {
+    "id": "abc1234567890123",
+    "title": "OpenAI Releases New Model",
+    "description": "OpenAI has released a new model that outperforms previous versions on key benchmarks.",
+    "link": "https://example.com/article/1",
+    "published": "2025-06-01T07:00:00Z",
+    "feed_name": "Sample Tech Feed",
+    "category": "Technology",
+    "summary": "OpenAI released a new AI model surpassing prior versions on major benchmarks."
+  },
+  {
+    "id": "def4567890123456",
+    "title": "Climate Summit Reaches Agreement",
+    "description": "World leaders at the annual climate summit have agreed on new emissions targets for 2035.",
+    "link": "https://example.com/article/4",
+    "published": "2025-06-01T10:00:00Z",
+    "feed_name": "BBC World News",
+    "category": "World News",
+    "summary": "World leaders agreed on new emissions targets for 2035 at the climate summit."
+  }
+]
