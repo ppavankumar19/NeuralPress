@@ -1,11 +1,35 @@
-# 📰 Local News / RSS Digest Agent
+# 📰 NeuralPress — Local RSS Digest Agent
 > Fetch RSS feeds, summarize with `llama3.2:3b` via MCP tools, and wake up to a clean daily brief — fully offline, zero subscriptions.
 
-![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)
+![Python](https://img.shields.io/badge/Python-3.12+-blue?logo=python)
 ![Ollama](https://img.shields.io/badge/Ollama-llama3.2:3b-black)
 ![MCP](https://img.shields.io/badge/MCP-Model%20Context%20Protocol-purple)
-![LangChain](https://img.shields.io/badge/LangChain-Agent-green)
+![LangChain](https://img.shields.io/badge/LangChain-0.3-green)
 ![License](https://img.shields.io/badge/License-MIT-lightgrey)
+
+---
+
+## 📡 What Is RSS?
+
+**RSS (Really Simple Syndication)** is a standard web format that websites use to publish their latest content in a machine-readable way.
+
+Instead of visiting 10 different news sites every morning, each website exposes an RSS **feed** — a structured XML file listing their latest articles with titles, summaries, links, and timestamps. This app fetches those XML files and gets all the new content in one place.
+
+```xml
+<rss version="2.0">
+  <channel>
+    <title>TechCrunch</title>
+    <item>
+      <title>OpenAI Releases New Model</title>
+      <link>https://techcrunch.com/...</link>
+      <description>OpenAI has announced...</description>
+      <pubDate>Sun, 18 May 2026 07:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
+```
+
+RSS is the **input source** of the entire pipeline — no scraping, no logins, no paid APIs.
 
 ---
 
@@ -15,8 +39,8 @@ A **local AI-powered news agent** that:
 1. Fetches articles from your chosen RSS feeds every morning
 2. Uses `llama3.2:3b` (via Ollama) to summarize each article
 3. Groups summaries by topic/category
-4. Saves a clean `daily_brief_YYYY-MM-DD.md` to your home folder
-5. Optionally serves a readable web UI at `localhost:8501`
+4. Saves a clean `daily_brief_YYYY-MM-DD.md` to your `output/` folder
+5. Optionally serves a responsive web UI at `localhost:5000`
 
 No cloud. No API keys. No tracking. Just your news, summarized your way.
 
@@ -47,8 +71,8 @@ ollama list   # should show llama3.2:3b
 ### 2. Clone & Setup
 
 ```bash
-git clone https://github.com/yourname/rss-digest-agent.git
-cd rss-digest-agent
+git clone git@github.com:ppavankumar19/NeuralPress.git
+cd NeuralPress
 
 python3 -m venv venv
 source venv/bin/activate
@@ -184,4 +208,4 @@ PRs welcome. Open an issue first for major changes.
 
 ## 📄 License
 
-MIT © 2025
+MIT © 2026
