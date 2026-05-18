@@ -6,12 +6,34 @@
 
 ---
 
-## 1. System Architecture
+## 1. What Is RSS?
+
+**RSS (Really Simple Syndication)** is a standard XML format used by websites to publish a live list of their latest articles. Each feed is a URL that returns structured XML containing article titles, descriptions, links and timestamps. No scraping, no authentication — just a `GET` request to a public URL.
+
+```xml
+<rss version="2.0">
+  <channel>
+    <title>Hacker News</title>
+    <item>
+      <title>Ask HN: Best local LLMs in 2026?</title>
+      <link>https://news.ycombinator.com/item?id=...</link>
+      <description>Discussion about running LLMs offline...</description>
+      <pubDate>Sun, 18 May 2026 07:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
+```
+
+**Why RSS?** Every major publisher provides one. It is machine-readable, standardised (RSS 2.0 and Atom 1.0), requires no API key, and `feedparser` handles all edge cases and encoding quirks.
+
+---
+
+## 2. System Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
 │                        agent.py (Orchestrator)                   │
-│                     LangChain Agent Loop                         │
+│                       Fixed Pipeline (v1.0)                      │
 └────────┬──────────────────┬────────────────────────┬─────────────┘
          │                  │                        │
          ▼                  ▼                        ▼
@@ -282,24 +304,7 @@ def get_llm(model_name: str = None, temperature: float = None) -> OllamaLLM:
 
 ---
 
-### 4.5 `core/agent_chain.py`
-
-**Responsibility:** Build a LangChain agent that uses the 3 MCP tools in sequence.
-
-**Agent type:** `AgentType.ZERO_SHOT_REACT_DESCRIPTION` (ReAct pattern)
-
-**Tool execution order (hardcoded pipeline, not free agent):**
-```
-1. fetch_rss(config_path)           → articles[]
-2. summarize_batch(articles, llm)   → articles[] with summaries
-3. save_digest(articles, output_dir) → file_path
-```
-
-> Note: For v1.0, the agent follows a fixed pipeline rather than a fully autonomous loop, for predictability and speed with a 3B model.
-
----
-
-### 4.6 `core/formatter.py`
+### 4.5 `core/formatter.py`
 
 **Responsibility:** Pure markdown formatting helpers (used by `save_digest`).
 
@@ -319,7 +324,7 @@ def format_digest_footer(model: str, elapsed: float, processed: int, skipped: in
 
 ---
 
-### 4.7 `agent.py` — Main Entry Point
+### 4.6 `agent.py` — Main Entry Point
 
 ```python
 """
@@ -379,9 +384,9 @@ Usage: python agent.py [--config feeds.yaml] [--output ./output]
 crontab -e
 
 # Run every day at 7:00 AM
-0 7 * * * cd /home/pavankumar19/rss-digest-agent && \
-  /home/pavankumar19/rss-digest-agent/venv/bin/python agent.py \
-  >> /home/pavankumar19/rss-digest-agent/logs/cron.log 2>&1
+0 7 * * * cd /home/pavankumar19/NeuralPress && \
+  /home/pavankumar19/NeuralPress/venv/bin/python agent.py \
+  >> /home/pavankumar19/NeuralPress/logs/cron.log 2>&1
 ```
 
 Create logs directory:
