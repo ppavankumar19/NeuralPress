@@ -1,8 +1,23 @@
 # 🛠️ Implementation Guide
 
-**Project:** Local News / RSS Digest Agent
+**Project:** NeuralPress — Local RSS Digest Agent
 **Platform:** Ubuntu 22.04 / 24.04
 **Models:** `llama3.2:3b` (summarization) via Ollama
+**Repo:** `git@github.com:ppavankumar19/NeuralPress.git`
+
+---
+
+## What Is RSS?
+
+**RSS (Really Simple Syndication)** is a standard XML format that news websites use to publish their latest articles automatically. The agent fetches each feed URL — a public, machine-readable file — and gets article titles, descriptions, links and publish dates without scraping or authentication.
+
+```
+feeds.yaml  →  list of RSS feed URLs by category
+feedparser  →  parses each feed XML into Python dicts
+fetch_rss   →  deduplicates, trims HTML, returns fresh articles
+```
+
+Every feed in `feeds.yaml` is just a URL pointing to one of these XML files. That is the entire data input for the pipeline.
 
 ---
 
@@ -12,7 +27,7 @@
 
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y python3.11 python3.11-venv python3-pip curl git
+sudo apt install -y python3 python3-venv python3-pip curl git
 ```
 
 ### 0.2 Verify Ollama & model
@@ -31,26 +46,28 @@ ollama serve &
 ### 0.3 Create project & virtual environment
 
 ```bash
-mkdir rss-digest-agent && cd rss-digest-agent
+git clone git@github.com:ppavankumar19/NeuralPress.git
+cd NeuralPress
 
-python3.11 -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 
 pip install --upgrade pip
 pip install langchain==0.3.* langchain-community==0.3.* langchain-ollama==0.2.* \
-            feedparser httpx pyyaml python-dotenv streamlit \
+            feedparser httpx pyyaml python-dotenv flask \
             beautifulsoup4 pytest
 ```
 
 ### 0.4 Create folder structure
 
 ```bash
-mkdir -p mcp core ui data output logs tests/fixtures
+mkdir -p mcp core ui/static data output logs tests/fixtures
 touch agent.py .env feeds.yaml
 touch mcp/__init__.py mcp/fetch_rss.py mcp/summarize.py mcp/save_digest.py
-touch core/__init__.py core/llm.py core/agent_chain.py core/formatter.py
-touch ui/app.py
-touch tests/__init__.py tests/test_fetch_rss.py tests/test_summarize.py tests/test_formatter.py
+touch core/__init__.py core/llm.py core/formatter.py
+touch ui/server.py ui/static/index.html
+touch tests/__init__.py tests/test_fetch_rss.py tests/test_summarize.py \
+      tests/test_formatter.py tests/test_save_digest.py
 ```
 
 ### 0.5 Create `.env`
@@ -552,60 +569,33 @@ if __name__ == "__main__":
 
 ---
 
-## Step 7 — Optional Streamlit UI
+## Step 7 — Optional Web UI
 
-### `ui/app.py`
+The web UI is a **Flask API server** (`ui/server.py`) that serves a single-file responsive frontend (`ui/static/index.html`). It replaces Streamlit with plain HTML + CSS + JS for full layout control, instant interactions, and a much smaller dependency footprint.
 
-```python
-import os
-import glob
-from pathlib import Path
-from datetime import datetime
+### API endpoints
 
-import streamlit as st
-from dotenv import load_dotenv
-load_dotenv()
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/` | Serve `index.html` |
+| `GET` | `/api/digests` | List all digest dates (JSON array, newest first) |
+| `GET` | `/api/digest/<date>` | Return markdown content for a date |
+| `POST` | `/api/run` | Trigger `agent.py`, return stdout/stderr |
 
-OUTPUT_DIR = os.getenv("OUTPUT_DIR", "./output")
+### Run the UI
 
-st.set_page_config(
-    page_title="📰 Daily Digest",
-    page_icon="📰",
-    layout="wide",
-)
-
-st.title("📰 Daily News Digest")
-st.caption("Locally generated with llama3.2:3b via Ollama")
-
-# Find all digest files
-digest_files = sorted(
-    glob.glob(os.path.join(OUTPUT_DIR, "daily_brief_*.md")),
-    reverse=True,
-)
-
-if not digest_files:
-    st.info("No digests found yet. Run `python agent.py` to generate your first digest.")
-    st.code("python agent.py")
-else:
-    # Date picker from available files
-    dates = [Path(f).stem.replace("daily_brief_", "") for f in digest_files]
-    selected_date = st.selectbox("📅 Select Date", dates)
-
-    selected_file = os.path.join(OUTPUT_DIR, f"daily_brief_{selected_date}.md")
-
-    col1, col2 = st.columns([3, 1])
-
-    with col2:
-        if st.button("🔄 Generate Today's Digest"):
-            with st.spinner("Running agent..."):
-                os.system("python agent.py")
-            st.rerun()
-
-    with col1:
-        with open(selected_file, "r", encoding="utf-8") as f:
-            content = f.read()
-        st.markdown(content)
+```bash
+source venv/bin/activate
+python ui/server.py
+# Open http://localhost:5000
 ```
+
+### UI features
+- Dark / light theme toggle (persists via `localStorage`)
+- Sidebar with all past digests, auto-loads the newest
+- Category filter pills with horizontal scroll
+- "Generate Today" button with live agent output log in a modal
+- Fully responsive: collapsible sidebar on tablet/mobile, filter strip on small screens
 
 ---
 
@@ -709,9 +699,9 @@ chmod +x agent.py
 crontab -e
 
 # Add this line (runs every day at 7:00 AM):
-0 7 * * * cd /home/pavankumar19/rss-digest-agent && \
-  /home/pavankumar19/rss-digest-agent/venv/bin/python agent.py \
-  >> /home/pavankumar19/rss-digest-agent/logs/cron.log 2>&1
+0 7 * * * cd /home/pavankumar19/NeuralPress && \
+  /home/pavankumar19/NeuralPress/venv/bin/python agent.py \
+  >> /home/pavankumar19/NeuralPress/logs/cron.log 2>&1
 
 # Verify crontab saved
 crontab -l
@@ -740,10 +730,11 @@ python agent.py
 # 🤖 Summarizing 18 articles with llama3.2:3b...
 #   [1/18] OpenAI announces new model...  ✅ Done in 8.2s
 #   ...
-# ✅ Digest saved: ./output/daily_brief_2025-06-01.md
+# ✅ Digest saved: ./output/daily_brief_2026-05-18.md
 
 # 4. View in browser (optional)
-streamlit run ui/app.py
+python ui/server.py
+# Open http://localhost:5000
 
 # 5. Run tests
 pytest tests/ -v
@@ -754,14 +745,14 @@ pytest tests/ -v
 ## Quick Validation Checklist
 
 ```
-[ ] ollama list            → shows llama3.2:3b
-[ ] python agent.py        → runs without errors
-[ ] output/ folder         → contains daily_brief_YYYY-MM-DD.md
-[ ] Open the .md file      → readable summaries with source links
-[ ] Run again same day     → "No new articles today" (dedup working)
-[ ] pytest tests/ -v       → all tests pass
-[ ] streamlit run ui/app.py → UI opens at localhost:8501
-[ ] crontab -l             → cron job listed
+[ ] ollama list             → shows llama3.2:3b
+[ ] python agent.py         → runs without errors
+[ ] output/ folder          → contains daily_brief_YYYY-MM-DD.md
+[ ] Open the .md file       → readable summaries with source links
+[ ] Run again same day      → "No new articles today" (dedup working)
+[ ] pytest tests/ -v        → 28 tests pass
+[ ] python ui/server.py     → UI opens at localhost:5000
+[ ] crontab -l              → cron job listed
 ```
 
 ---
