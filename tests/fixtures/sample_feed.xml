@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Sample Tech Feed</title>
+    <link>https://example.com</link>
+    <description>A sample RSS feed for testing</description>
+    <item>
+      <title>OpenAI Releases New Model</title>
+      <link>https://example.com/article/1</link>
+      <description>OpenAI has released a new model that outperforms previous versions on key benchmarks.</description>
+      <pubDate>Mon, 01 Jun 2025 07:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Linux Kernel 7.0 Released</title>
+      <link>https://example.com/article/2</link>
+      <description>The Linux Foundation has announced the release of kernel version 7.0 with major performance improvements.</description>
+      <pubDate>Mon, 01 Jun 2025 08:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Rust Overtakes Python in Web Dev</title>
+      <link>https://example.com/article/3</link>
+      <description>A new survey shows Rust gaining ground in web development use cases traditionally dominated by Python.</description>
+      <pubDate>Mon, 01 Jun 2025 09:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
