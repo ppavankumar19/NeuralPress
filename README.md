@@ -127,6 +127,85 @@ crontab -e
 
 ---
 
+## Process Flow
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        feeds.yaml                           │
+│         (RSS feed URLs, categories, settings)               │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│               MCP Tool 1: fetch_rss.py                      │
+│                                                             │
+│  1. Read feeds.yaml                                         │
+│  2. For each enabled feed:                                  │
+│     - feedparser.parse(url)  →  fetch XML from internet     │
+│     - Strip HTML from descriptions                          │
+│     - SHA-256 each article URL → check seen_articles.json   │
+│     - Skip if already seen (deduplication)                  │
+│  3. Truncate descriptions to 1500 chars                     │
+│  4. Return list of fresh article dicts                      │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                    [articles list]
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│               MCP Tool 2: summarize.py                      │
+│                                                             │
+│  For each article:                                          │
+│  1. Build prompt with title + description                   │
+│  2. llm.invoke(prompt)  →  Ollama (llama3.2:3b)            │
+│  3. Get back ~80-word summary                               │
+│  4. Attach summary to article dict                          │
+│  5. If fails → skip article, continue                       │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                  [summarized articles]
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│               MCP Tool 3: save_digest.py                    │
+│                                                             │
+│  1. Group articles by category                              │
+│  2. Render markdown (header + sections + footer)            │
+│  3. Write  output/daily_brief_YYYY-MM-DD.md                 │
+│  4. Update seen_articles.json  (mark all as seen)           │
+└──────────────────────────┬──────────────────────────────────┘
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      ui/server.py                           │
+│                    Flask web server                         │
+│                                                             │
+│  GET /api/digests        →  list all digest dates           │
+│  GET /api/digest/<date>  →  return markdown content         │
+│  POST /api/run           →  trigger agent.py manually       │
+│                                                             │
+│  Serves static/index.html  →  http://localhost:5000         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Data stores touched along the way:**
+
+```
+data/seen_articles.json   <->  fetch_rss.py (read) + save_digest.py (write)
+output/daily_brief_*.md    <-  save_digest.py (write) + ui/server.py (read)
+feeds.yaml                 <-  fetch_rss.py (read only)
+.env                       <-  agent.py (load at startup)
+```
+
+**Scheduler (optional):**
+
+```
+cron (7 AM daily)
+    └──► python agent.py  (runs Tools 1 → 2 → 3 in sequence)
+```
+
+---
+
 ## Project Structure
 
 ```
@@ -146,15 +225,12 @@ NeuralPress/
 ├── core/
 │   ├── __init__.py
 │   ├── llm.py                # Ollama LLM wrapper
-│   ├── agent_chain.py        # Pipeline orchestrator
 │   └── formatter.py          # Markdown digest formatter
 │
 ├── ui/
 │   ├── server.py             # Flask API server
 │   └── static/
-│       ├── index.html        # Web UI
-│       ├── style.css         # Styles
-│       └── app.js            # Frontend logic
+│       └── index.html        # Web UI (CSS + JS inlined)
 │
 ├── output/                   # Daily brief .md files saved here
 ├── data/                     # seen_articles.json cache
